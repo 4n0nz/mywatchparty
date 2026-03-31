@@ -55,10 +55,19 @@ export const NewRoomButton = (props: {
   size?: string;
   openNewTab?: boolean;
 }) => {
+  if (typeof window !== 'undefined' && window.location.pathname.startsWith('/r/')) {
+    return null;
+  }
+
   const context = useContext(MetadataContext);
+  if (!context.user || context.user.email !== 'p4tzr1ot@gmail.com') {
+    return null;
+  }
+
   const onClick = useCallback(async () => {
     await createRoom(context.user, props.openNewTab);
   }, [context.user, props.openNewTab]);
+
   return (
     <Button
       size={props.size}
