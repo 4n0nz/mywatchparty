@@ -1,0 +1,62 @@
+version: "3.3"
+services:
+  traefik:
+    container_name: traefik
+    image: "traefik:v3.6"
+    command:
+      - --entrypoints.web.address=:80
+      - --entrypoints.websecure.address=:443
+      - --providers.docker
+      - --api
+      - --certificatesresolvers.leresolver.acme.email=datizallineed@gmail.com
+      - --certificatesresolvers.leresolver.acme.storage=/letsencrypt/acme.json
+      - --certificatesresolvers.leresolver.acme.tlschallenge=true
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - "/var/run/docker.sock:/var/run/docker.sock:ro"
+      - "./letsencrypt:/letsencrypt"
+    labels:
+      - "traefik.http.routers.traefik.rule=Host(`${domain1}`)"
+      - "traefik.http.routers.traefik.service=api@internal"
+      - "traefik.http.routers.traefik.tls.certresolver=leresolver"
+      - "traefik.http.routers.traefik.entrypoints=websecure"
+      - "traefik.http.routers.traefik.middlewares=authtraefik"
+      - "traefik.http.middlewares.authtraefik.basicauth.users=krew7:$$2y$$05$$k6WUhY6nH9iHF3Ug2ceFfOlyX/6bSSbZTgAuW7aCFyRnXgJWp9hoe"
+      - "traefik.http.routers.http-catchall.rule=HostRegexp(`{host:.+}`)"
+      - "traefik.http.routers.http-catchall.entrypoints=web"
+      - "traefik.http.routers.http-catchall.middlewares=redirect-to-https"
+      - "traefik.http.middlewares.redirect-to-https.redirectscheme.scheme=https"
+
+  watchparty:
+    container_name: watchparty
+    build: .
+    restart: unless-stopped
+    environment:
+      - DATABASE_URL=${DATABASE_URL}
+    depends_on:
+      - postgres
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.watchparty.rule=Host(`live.anonymous.wtf`)"
+      - "traefik.http.routers.watchparty.entrypoints=websecure"
+      - "traefik.http.routers.watchparty.tls.certresolver=leresolver"
+      - "traefik.http.services.watchparty.loadbalancer.server.port=8080"
+
+  postgres:
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: watchparty
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+networks:
+  default:
+    external:
+      name: webproxy
+
+volumes:
+  postgres_data:
