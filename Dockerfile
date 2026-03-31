@@ -1,11 +1,6 @@
 FROM node:24-alpine
-
 COPY . /usr/src
-
 WORKDIR /usr/src
-
-RUN npm ci
-
+RUN npm install
 RUN npm run build
-
-ENTRYPOINT ["/bin/sh", "-c" , "npm start"]
+ENTRYPOINT ["npm", "start"]
